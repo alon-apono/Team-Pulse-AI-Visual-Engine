@@ -1,0 +1,117 @@
+{
+  "name": "Team Pulse - Ambient Director",
+  "nodes": [
+    {
+      "id": "schedule-trigger",
+      "name": "Every 30 Seconds",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [250, 300],
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "seconds", "secondsInterval": 30}]
+        }
+      }
+    },
+    {
+      "id": "aggregate-data",
+      "name": "Aggregate Activity Data",
+      "type": "n8n-nodes-base.code",
+      "position": [470, 300],
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst events = staticData.allEvents || [];\nconst now = Date.now();\nconst thirtySecondsAgo = now - 30000;\n\nconst recentEvents = events.filter(e => e.timestamp > thirtySecondsAgo);\n\nconst typeCounts = {};\nrecentEvents.forEach(e => {\n  typeCounts[e.type] = (typeCounts[e.type] || 0) + 1;\n});\n\nconst summary = {\n  totalEvents: recentEvents.length,\n  slackMessages: typeCounts.slack_message || 0,\n  slackReactions: typeCounts.slack_reaction || 0,\n  githubCommits: typeCounts.github_commit || 0,\n  githubPRsMerged: typeCounts.github_pr_merged || 0,\n  jiraTicketsDone: typeCounts.jira_ticket_done || 0,\n  timestamp: new Date().toISOString()\n};\n\nconst textSummary = `In the last 30 seconds: ${summary.slackMessages} Slack messages, ${summary.slackReactions} reactions, ${summary.githubCommits} code commits, ${summary.githubPRsMerged} PRs merged, ${summary.jiraTicketsDone} tickets completed. Total activity: ${summary.totalEvents} events.`;\n\nreturn {\n  ...summary,\n  textSummary\n};"
+      }
+    },
+    {
+      "id": "ai-interpret",
+      "name": "AI Creative Director",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "position": [690, 300],
+      "typeVersion": 1.8,
+      "parameters": {
+        "resource": "chat",
+        "model": "gpt-4o",
+        "messages": {
+          "values": [{"content": "={{ $json.textSummary }}"}]
+        },
+        "options": {
+          "systemMessage": "You are a Creative Visual Director for Team Pulse, a live visualization system. Based on team activity data, you decide the visual mood and theme.\n\nRespond with ONLY valid JSON in this exact format:\n{\n  \"mood\": \"flow_state\" | \"creative_chaos\" | \"victory_lap\" | \"deep_focus\" | \"idle\",\n  \"energy\": 0.0 to 1.0,\n  \"theme_clip\": 1 to 5,\n  \"color_scheme\": \"warm\" | \"cool\" | \"electric\" | \"zen\" | \"celebration\",\n  \"narrative\": \"One sentence describing the team's energy\"\n}\n\nMood Guide:\n- flow_state: Steady productive work, moderate activity\n- creative_chaos: High activity, lots happening\n- victory_lap: PRs merged, tickets done = wins!\n- deep_focus: Low activity, people concentrating\n- idle: Very little happening\n\nBe creative with the narrative!"
+        }
+      }
+    },
+    {
+      "id": "parse-ai",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "position": [910, 300],
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nlet aiDecision;\n\ntry {\n  const content = response.message?.content || response.content || '{}';\n  aiDecision = JSON.parse(content);\n} catch (e) {\n  aiDecision = {\n    mood: 'idle',\n    energy: 0.3,\n    theme_clip: 1,\n    color_scheme: 'zen',\n    narrative: 'The team is in a quiet moment.'\n  };\n}\n\nconst moodMapping = {\n  'flow_state': { layer: 4, clip: 1 },\n  'creative_chaos': { layer: 4, clip: 2 },\n  'victory_lap': { layer: 4, clip: 3 },\n  'deep_focus': { layer: 4, clip: 4 },\n  'idle': { layer: 4, clip: 5 }\n};\n\nconst mapping = moodMapping[aiDecision.mood] || moodMapping.idle;\n\nreturn {\n  ...aiDecision,\n  resolume: {\n    layer: mapping.layer,\n    clip: mapping.clip,\n    opacity: aiDecision.energy\n  }\n};"
+      }
+    },
+    {
+      "id": "trigger-theme",
+      "name": "Trigger Theme Clip",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1130, 200],
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.RESOLUME_ENDPOINT }}/api/v1/composition/layers/{{ $json.resolume.layer }}/clips/{{ $json.resolume.clip }}/connect",
+        "options": {}
+      }
+    },
+    {
+      "id": "set-theme-opacity",
+      "name": "Set Theme Opacity",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1130, 400],
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $env.RESOLUME_ENDPOINT }}/api/v1/composition/layers/{{ $json.resolume.layer }}/video/opacity",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"value\": {{ $json.resolume.opacity }} }",
+        "options": {}
+      }
+    },
+    {
+      "id": "sticky-info",
+      "name": "Info",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [250, 520],
+      "typeVersion": 1,
+      "parameters": {
+        "content": "## Team Pulse - Ambient Director\n\nRuns every 30 seconds. AI interprets team activity and decides the overall visual mood/theme.\n\n**Moods:** flow_state, creative_chaos, victory_lap, deep_focus, idle",
+        "height": 180,
+        "width": 350
+      }
+    }
+  ],
+  "connections": {
+    "Every 30 Seconds": {
+      "main": [[{"node": "Aggregate Activity Data", "type": "main", "index": 0}]]
+    },
+    "Aggregate Activity Data": {
+      "main": [[{"node": "AI Creative Director", "type": "main", "index": 0}]]
+    },
+    "AI Creative Director": {
+      "main": [[{"node": "Parse AI Response", "type": "main", "index": 0}]]
+    },
+    "Parse AI Response": {
+      "main": [
+        [
+          {"node": "Trigger Theme Clip", "type": "main", "index": 0},
+          {"node": "Set Theme Opacity", "type": "main", "index": 0}
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  }
+}
+

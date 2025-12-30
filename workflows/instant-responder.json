@@ -1,0 +1,84 @@
+{
+  "name": "Team Pulse - Instant Responder",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "Event Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "typeVersion": 2,
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "team-pulse/event",
+        "options": {}
+      }
+    },
+    {
+      "id": "event-mapper",
+      "name": "Map Event to Visual",
+      "type": "n8n-nodes-base.code",
+      "position": [470, 300],
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "// Map event types to Resolume visual effects\nconst event = $input.first().json;\nconst eventType = event.body?.type || event.type || 'unknown';\nconst source = event.body?.source || event.source || 'unknown';\nconst message = event.body?.message || event.message || '';\n\n// Effect mapping for instant visual pulses\nconst effectMap = {\n  'slack_message': { layer: 1, clip: 1, effect: 'ripple', color: '#3498db', intensity: 0.7 },\n  'slack_reaction': { layer: 1, clip: 2, effect: 'particle_burst', color: '#f1c40f', intensity: 0.5 },\n  'github_commit': { layer: 2, clip: 1, effect: 'code_rain', color: '#2ecc71', intensity: 0.8 },\n  'github_pr_merged': { layer: 2, clip: 3, effect: 'celebration', color: '#f39c12', intensity: 1.0 },\n  'jira_ticket_done': { layer: 3, clip: 3, effect: 'complete', color: '#27ae60', intensity: 0.9 },\n  'unknown': { layer: 1, clip: 1, effect: 'pulse', color: '#95a5a6', intensity: 0.4 }\n};\n\nconst effect = effectMap[eventType] || effectMap['unknown'];\nconst posX = Math.random();\nconst posY = Math.random();\n\nreturn {\n  eventType,\n  source,\n  message,\n  ...effect,\n  posX,\n  posY,\n  timestamp: Date.now()\n};"
+      }
+    },
+    {
+      "id": "trigger-clip",
+      "name": "Trigger Resolume Clip",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [690, 200],
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.RESOLUME_ENDPOINT }}/api/v1/composition/layers/{{ $json.layer }}/clips/{{ $json.clip }}/connect",
+        "options": {}
+      }
+    },
+    {
+      "id": "set-intensity",
+      "name": "Set Layer Intensity",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [690, 400],
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $env.RESOLUME_ENDPOINT }}/api/v1/composition/layers/{{ $json.layer }}/video/opacity",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"value\": {{ $json.intensity }} }",
+        "options": {}
+      }
+    },
+    {
+      "id": "sticky-info",
+      "name": "Info",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [250, 520],
+      "typeVersion": 1,
+      "parameters": {
+        "content": "## Team Pulse - Instant Responder\n\nReceives events via webhook and immediately triggers Resolume visuals.\n\n**Webhook:** POST /webhook/team-pulse/event\n\n**Event Types:** slack_message, github_commit, github_pr_merged, jira_ticket_done",
+        "height": 200,
+        "width": 350
+      }
+    }
+  ],
+  "connections": {
+    "Event Webhook": {
+      "main": [[{"node": "Map Event to Visual", "type": "main", "index": 0}]]
+    },
+    "Map Event to Visual": {
+      "main": [
+        [
+          {"node": "Trigger Resolume Clip", "type": "main", "index": 0},
+          {"node": "Set Layer Intensity", "type": "main", "index": 0}
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  }
+}
+

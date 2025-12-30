@@ -1,0 +1,100 @@
+{
+  "name": "Team Pulse - Adaptive Processor",
+  "nodes": [
+    {
+      "id": "schedule-trigger",
+      "name": "Every 5 Seconds",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [250, 300],
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "seconds", "secondsInterval": 5}]
+        }
+      }
+    },
+    {
+      "id": "get-buffer",
+      "name": "Get Event Buffer",
+      "type": "n8n-nodes-base.code",
+      "position": [470, 300],
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "// Simulate reading from event buffer\nconst now = Date.now();\nconst fiveSecondsAgo = now - 5000;\n\nconst staticData = $getWorkflowStaticData('global');\nconst events = staticData.recentEvents || [];\n\nconst recentEvents = events.filter(e => e.timestamp > fiveSecondsAgo);\n\nconst eventCount = recentEvents.length;\nconst eventTypes = recentEvents.map(e => e.type);\nconst dominantType = eventTypes.sort((a,b) =>\n  eventTypes.filter(v => v===a).length - eventTypes.filter(v => v===b).length\n).pop() || 'idle';\n\nconst activityLevel = Math.min(eventCount / 10, 1);\nconst energy = activityLevel > 0.7 ? 'high' : activityLevel > 0.3 ? 'medium' : 'low';\nconst colorTemp = activityLevel > 0.6 ? 'warm' : activityLevel > 0.3 ? 'neutral' : 'cool';\n\nreturn {\n  eventCount,\n  activityLevel,\n  energy,\n  colorTemp,\n  dominantType,\n  bpm: 60 + Math.floor(activityLevel * 80),\n  timestamp: now\n};"
+      }
+    },
+    {
+      "id": "calculate-visuals",
+      "name": "Calculate Visual Parameters",
+      "type": "n8n-nodes-base.code",
+      "position": [690, 300],
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\n\nconst colorMap = {\n  'warm': { r: 255, g: 150, b: 50 },\n  'neutral': { r: 100, g: 150, b: 200 },\n  'cool': { r: 50, g: 100, b: 200 }\n};\n\nconst color = colorMap[data.colorTemp] || colorMap.neutral;\nconst masterOpacity = 0.3 + (data.activityLevel * 0.7);\nconst effectSpeed = 0.5 + (data.activityLevel * 1.5);\n\nreturn {\n  ...data,\n  color,\n  masterOpacity,\n  effectSpeed,\n  resolume: {\n    tempo: data.bpm,\n    layer1Opacity: masterOpacity,\n    colorR: color.r / 255,\n    colorG: color.g / 255,\n    colorB: color.b / 255\n  }\n};"
+      }
+    },
+    {
+      "id": "set-tempo",
+      "name": "Set BPM",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [910, 200],
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $env.RESOLUME_ENDPOINT }}/api/v1/composition/tempocontroller/tempo",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"value\": {{ $json.resolume.tempo }} }",
+        "options": {}
+      }
+    },
+    {
+      "id": "set-master-opacity",
+      "name": "Set Master Opacity",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [910, 400],
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $env.RESOLUME_ENDPOINT }}/api/v1/composition/video/opacity",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"value\": {{ $json.resolume.layer1Opacity }} }",
+        "options": {}
+      }
+    },
+    {
+      "id": "sticky-info",
+      "name": "Info",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [250, 520],
+      "typeVersion": 1,
+      "parameters": {
+        "content": "## Team Pulse - Adaptive Processor\n\nRuns every 5 seconds to analyze recent activity and adjust visual parameters.\n\n**Adjusts:** BPM, opacity, color temperature based on team activity frequency.",
+        "height": 180,
+        "width": 350
+      }
+    }
+  ],
+  "connections": {
+    "Every 5 Seconds": {
+      "main": [[{"node": "Get Event Buffer", "type": "main", "index": 0}]]
+    },
+    "Get Event Buffer": {
+      "main": [[{"node": "Calculate Visual Parameters", "type": "main", "index": 0}]]
+    },
+    "Calculate Visual Parameters": {
+      "main": [
+        [
+          {"node": "Set BPM", "type": "main", "index": 0},
+          {"node": "Set Master Opacity", "type": "main", "index": 0}
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  }
+}
+

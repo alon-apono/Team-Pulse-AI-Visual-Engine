@@ -1,0 +1,166 @@
+{
+  "name": "Team Pulse - Demo Trigger Panel",
+  "nodes": [
+    {
+      "id": "webhook-demo",
+      "name": "Demo Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "typeVersion": 2,
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "team-pulse/demo",
+        "options": {"responseMode": "responseNode"}
+      }
+    },
+    {
+      "id": "route-event",
+      "name": "Route Demo Event",
+      "type": "n8n-nodes-base.switch",
+      "position": [470, 300],
+      "typeVersion": 3.2,
+      "parameters": {
+        "rules": {
+          "values": [
+            {"outputKey": "slack", "conditions": {"conditions": [{"leftValue": "={{ $json.body.demo_type }}", "operator": {"type": "string", "operation": "equals"}, "rightValue": "slack"}]}},
+            {"outputKey": "github", "conditions": {"conditions": [{"leftValue": "={{ $json.body.demo_type }}", "operator": {"type": "string", "operation": "equals"}, "rightValue": "github"}]}},
+            {"outputKey": "jira", "conditions": {"conditions": [{"leftValue": "={{ $json.body.demo_type }}", "operator": {"type": "string", "operation": "equals"}, "rightValue": "jira"}]}},
+            {"outputKey": "celebration", "conditions": {"conditions": [{"leftValue": "={{ $json.body.demo_type }}", "operator": {"type": "string", "operation": "equals"}, "rightValue": "celebration"}]}},
+            {"outputKey": "burst", "conditions": {"conditions": [{"leftValue": "={{ $json.body.demo_type }}", "operator": {"type": "string", "operation": "equals"}, "rightValue": "burst"}]}}
+          ]
+        }
+      }
+    },
+    {
+      "id": "slack-events",
+      "name": "Generate Slack Events",
+      "type": "n8n-nodes-base.code",
+      "position": [690, 100],
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const events = [];\nconst count = Math.floor(Math.random() * 5) + 3;\n\nfor (let i = 0; i < count; i++) {\n  events.push({\n    json: {\n      type: Math.random() > 0.7 ? 'slack_reaction' : 'slack_message',\n      source: 'demo',\n      message: `Demo message ${i + 1}`,\n      channel: ['#engineering', '#general', '#random'][Math.floor(Math.random() * 3)]\n    }\n  });\n}\n\nreturn events;"
+      }
+    },
+    {
+      "id": "github-events",
+      "name": "Generate GitHub Events",
+      "type": "n8n-nodes-base.code",
+      "position": [690, 250],
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const events = [];\nconst types = ['github_commit', 'github_commit', 'github_commit', 'github_pr_merged'];\n\nfor (let i = 0; i < 4; i++) {\n  events.push({\n    json: {\n      type: types[i],\n      source: 'demo',\n      message: types[i] === 'github_pr_merged' ? 'PR #' + Math.floor(Math.random() * 100) + ' merged!' : 'Commit: Fix bug'\n    }\n  });\n}\n\nreturn events;"
+      }
+    },
+    {
+      "id": "jira-events",
+      "name": "Generate Jira Events",
+      "type": "n8n-nodes-base.code",
+      "position": [690, 400],
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return [\n  { json: { type: 'jira_ticket_done', source: 'demo', message: 'PROJ-123 Done' } },\n  { json: { type: 'jira_ticket_done', source: 'demo', message: 'PROJ-124 Done' } },\n  { json: { type: 'jira_sprint_complete', source: 'demo', message: 'Sprint 42 Complete!' } }\n];"
+      }
+    },
+    {
+      "id": "celebration-event",
+      "name": "Celebration Sequence",
+      "type": "n8n-nodes-base.code",
+      "position": [690, 550],
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "return [\n  { json: { type: 'github_pr_merged', source: 'demo', message: 'Major Release v2.0!' } },\n  { json: { type: 'jira_sprint_complete', source: 'demo', message: 'All tickets done!' } },\n  { json: { type: 'slack_reaction', source: 'demo', message: '🎉🎉🎉' } }\n];"
+      }
+    },
+    {
+      "id": "burst-events",
+      "name": "Event Burst",
+      "type": "n8n-nodes-base.code",
+      "position": [690, 700],
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "const types = ['slack_message', 'github_commit', 'jira_ticket_done', 'slack_reaction'];\nconst events = [];\n\nfor (let i = 0; i < 20; i++) {\n  events.push({\n    json: {\n      type: types[Math.floor(Math.random() * types.length)],\n      source: 'demo',\n      message: `Burst event ${i + 1}`\n    }\n  });\n}\n\nreturn events;"
+      }
+    },
+    {
+      "id": "send-to-responder",
+      "name": "Send to Instant Responder",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [910, 400],
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_WEBHOOK_URL || 'https://n8n.staging.apono.io' }}/webhook/team-pulse/event",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 200
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "respond",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [1130, 400],
+      "typeVersion": 1.1,
+      "parameters": {
+        "options": {},
+        "respondWith": "json",
+        "responseBody": "={ \"success\": true, \"events_triggered\": {{ $items().length }} }"
+      }
+    },
+    {
+      "id": "sticky-info",
+      "name": "Demo Controls",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [250, 850],
+      "typeVersion": 1,
+      "parameters": {
+        "content": "## Demo Trigger Panel\n\nPOST to /webhook/team-pulse/demo with:\n\n```json\n{ \"demo_type\": \"slack\" }     // 3-7 Slack events\n{ \"demo_type\": \"github\" }    // 4 commits + PR merge  \n{ \"demo_type\": \"jira\" }      // 3 Jira events\n{ \"demo_type\": \"celebration\" } // Victory sequence\n{ \"demo_type\": \"burst\" }     // 20 rapid events!\n```",
+        "height": 280,
+        "width": 400
+      }
+    }
+  ],
+  "connections": {
+    "Demo Trigger": {
+      "main": [[{"node": "Route Demo Event", "type": "main", "index": 0}]]
+    },
+    "Route Demo Event": {
+      "slack": [[{"node": "Generate Slack Events", "type": "main", "index": 0}]],
+      "github": [[{"node": "Generate GitHub Events", "type": "main", "index": 0}]],
+      "jira": [[{"node": "Generate Jira Events", "type": "main", "index": 0}]],
+      "celebration": [[{"node": "Celebration Sequence", "type": "main", "index": 0}]],
+      "burst": [[{"node": "Event Burst", "type": "main", "index": 0}]]
+    },
+    "Generate Slack Events": {
+      "main": [[{"node": "Send to Instant Responder", "type": "main", "index": 0}]]
+    },
+    "Generate GitHub Events": {
+      "main": [[{"node": "Send to Instant Responder", "type": "main", "index": 0}]]
+    },
+    "Generate Jira Events": {
+      "main": [[{"node": "Send to Instant Responder", "type": "main", "index": 0}]]
+    },
+    "Celebration Sequence": {
+      "main": [[{"node": "Send to Instant Responder", "type": "main", "index": 0}]]
+    },
+    "Event Burst": {
+      "main": [[{"node": "Send to Instant Responder", "type": "main", "index": 0}]]
+    },
+    "Send to Instant Responder": {
+      "main": [[{"node": "Respond OK", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  }
+}
+
