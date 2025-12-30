@@ -20,7 +20,7 @@
       "position": [470, 300],
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "// Team Pulse v2 - Heart + Text Overlay System\n// Layer 1: Heart (always on) - Clip 1\n// Layer 2: Text overlays - GitHub (clip 1), Jira (clip 2), Slack (clip 3)\n\nconst event = $input.first().json;\nconst eventType = event.body?.type || event.type || 'unknown';\nconst source = event.body?.source || event.source || 'unknown';\nconst message = event.body?.message || event.message || '';\n\n// Resolume Parameter IDs (from your composition)\nconst PARAM_IDS = {\n  L2_TRANS_DUR: 1767124586747,\n  L2_TRANS_BLEND: 1767124586657,\n  TURB_STRENGTH: 1767124595384,\n  SAT_SCALE: 1767124595299,\n  HUE_ROTATE: 1767124595298\n};\n\n// Effect mapping\nconst effectMap = {\n  'github_commit': { layer: 2, clip: 1, transition: 'DigiGlitch', saturation: 0.0, hue: 0.0, turbulence: 0.4 },\n  'github_pr_merged': { layer: 2, clip: 1, transition: 'DigiGlitch', saturation: 0.0, hue: 0.0, turbulence: 0.5 },\n  'jira_ticket_done': { layer: 2, clip: 2, transition: 'Dissolve', saturation: 0.9, hue: 0.55, turbulence: 0.0 },\n  'jira_sprint_complete': { layer: 2, clip: 2, transition: 'Dissolve', saturation: 1.0, hue: 0.55, turbulence: 0.1 },\n  'slack_message': { layer: 2, clip: 3, transition: 'Zoom In', saturation: 1.0, hue: 0.0, turbulence: 0.2 },\n  'slack_reaction': { layer: 2, clip: 3, transition: 'Zoom In', saturation: 1.0, hue: 0.0, turbulence: 0.3 },\n  'idle': { layer: 1, clip: 1, transition: 'Alpha', saturation: 1.0, hue: 0.0, turbulence: 0.0 },\n  'unknown': { layer: 2, clip: 1, transition: 'Alpha', saturation: 0.5, hue: 0.0, turbulence: 0.1 }\n};\n\nconst effect = effectMap[eventType] || effectMap['unknown'];\n\nreturn { eventType, source, message, ...effect, paramIds: PARAM_IDS, timestamp: Date.now() };"
+        "jsCode": "// Team Pulse v2 - Heart + Logo + Text Overlay System\n// Layer 1: Heart (always on, less effects) - Clip 1\n// Layer 2: Logo (always on)\n// Layer 3: Text overlays - GitHub (clip 1), Jira (clip 2), Slack (clip 3)\n\nconst event = $input.first().json;\nconst eventType = event.body?.type || event.type || 'unknown';\nconst source = event.body?.source || event.source || 'unknown';\nconst message = event.body?.message || event.message || '';\n\n// Resolume Parameter IDs (from your composition)\nconst PARAM_IDS = {\n  L3_TRANS_DUR: 1767124586747,\n  L3_TRANS_BLEND: 1767124586657,\n  TURB_STRENGTH: 1767124595384,\n  SAT_SCALE: 1767124595299,\n  HUE_ROTATE: 1767124595298\n};\n\n// Effect mapping\nconst effectMap = {\n  'github_commit': { layer: 3, clip: 1, transition: 'DigiGlitch', saturation: 0.0, hue: 0.0, turbulence: 0.15 },\n  'github_pr_merged': { layer: 3, clip: 1, transition: 'DigiGlitch', saturation: 0.0, hue: 0.0, turbulence: 0.2 },\n  'jira_ticket_done': { layer: 3, clip: 2, transition: 'Dissolve', saturation: 0.9, hue: 0.55, turbulence: 0.0 },\n  'jira_sprint_complete': { layer: 3, clip: 2, transition: 'Dissolve', saturation: 1.0, hue: 0.55, turbulence: 0.1 },\n  'slack_message': { layer: 3, clip: 3, transition: 'Zoom In', saturation: 1.0, hue: 0.0, turbulence: 0.2 },\n  'slack_reaction': { layer: 3, clip: 3, transition: 'Zoom In', saturation: 1.0, hue: 0.0, turbulence: 0.3 },\n  'idle': { layer: 1, clip: 1, transition: 'Alpha', saturation: 1.0, hue: 0.0, turbulence: 0.0 },\n  'unknown': { layer: 3, clip: 1, transition: 'Alpha', saturation: 0.5, hue: 0.0, turbulence: 0.1 }\n};\n\nconst effect = effectMap[eventType] || effectMap['unknown'];\n\nreturn { eventType, source, message, ...effect, paramIds: PARAM_IDS, timestamp: Date.now() };"
       }
     },
     {
@@ -31,7 +31,7 @@
       "typeVersion": 4.2,
       "parameters": {
         "method": "PUT",
-        "url": "={{ $env.RESOLUME_ENDPOINT }}/api/v1/parameter/by-id/{{ $json.paramIds.L2_TRANS_BLEND }}",
+        "url": "={{ $env.RESOLUME_ENDPOINT }}/api/v1/parameter/by-id/{{ $json.paramIds.L3_TRANS_BLEND }}",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={ \"value\": \"{{ $json.transition }}\" }"
@@ -109,7 +109,7 @@
       "typeVersion": 4.2,
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.RESOLUME_ENDPOINT }}/api/v1/composition/layers/2/clear"
+        "url": "={{ $env.RESOLUME_ENDPOINT }}/api/v1/composition/layers/3/clear"
       }
     },
     {
