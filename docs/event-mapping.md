@@ -1,110 +1,106 @@
-# Event to Visual Mapping
+# Team Pulse v2 - Event Mapping
 
-## Current Clip Assignments
+## Layer Structure
 
-Each event type triggers a **distinct visual** in Resolume Arena (Layer 1).
+| Layer | Content | Behavior |
+|-------|---------|----------|
+| **Layer 1** | Heart clip | Always beating (constant) |
+| **Layer 2** | Text overlays | Shows for 4 seconds on event, then clears |
 
-| Event Type | Clip # | Clip Name | Visual Style | Meaning |
-|------------|--------|-----------|--------------|---------|
-| `idle` | 2 | calmness | Peaceful, flowing | Team is quiet |
-| `slack_message` | 3 | cubularwonk | Geometric, structured | Communication |
-| `slack_reaction` | 12 | redripple | Red burst, attention | Engagement! |
-| `github_commit` | 6 | organicspiral | Flowing, organic | Code flowing |
-| `github_pr_merged` | 15 | wonkarama | Energetic, dynamic | Celebration! |
-| `jira_ticket_created` | 1 | basaloopisk | Emerging, starting | New work begins |
-| `jira_ticket_done` | 10 | protrusion | Burst outward | Completion! |
-| `jira_sprint_complete` | 16 | wonkwobble1 | Maximum energy | Big win! 🏆 |
-| `unknown` | 14 | tunneling | Mysterious | Unknown event |
+## Layer 2 Clip Mapping
 
-## Visual Hierarchy
+| Clip | Name | Event Types |
+|------|------|-------------|
+| Clip 1 | GitHub | `github_commit`, `github_pr_merged` |
+| Clip 2 | Jira | `jira_ticket_done`, `jira_sprint_complete` |
+| Clip 3 | Slack | `slack_message`, `slack_reaction` |
 
-The clips are chosen to create a **visual narrative**:
+## Event → Visual Effects
 
-```
-Calm (idle) → Activity (messages, commits) → Celebration (merged, done) → Victory (sprint complete)
-     ↓              ↓                              ↓                           ↓
- Peaceful      Geometric/Flowing            Energetic bursts           Maximum energy
-```
+### 🐙 GitHub Events
+| Setting | Value | Description |
+|---------|-------|-------------|
+| Layer | 2 | Text overlay |
+| Clip | 1 | GitHub text + audio |
+| Transition | DigiGlitch | Glitchy, techy feel |
+| Saturation | 0.0 | Gray/Black & White |
+| Hue | 0.0 | No shift |
+| Turbulence | 0.4 | Wavy distortion |
 
-## Event Payload Format
+### 📋 Jira Events
+| Setting | Value | Description |
+|---------|-------|-------------|
+| Layer | 2 | Text overlay |
+| Clip | 2 | Jira text + audio |
+| Transition | Dissolve | Smooth, professional |
+| Saturation | 0.9 | Slightly desaturated |
+| Hue | 0.55 | Blue shift (Jira blue) |
+| Turbulence | 0.0 | No distortion |
 
-```json
-POST /webhook/team-pulse/event
+### 💬 Slack Events
+| Setting | Value | Description |
+|---------|-------|-------------|
+| Layer | 2 | Text overlay |
+| Clip | 3 | Slack text + audio |
+| Transition | Zoom In | Energetic, attention-grabbing |
+| Saturation | 1.0 | Full color (colorful) |
+| Hue | 0.0 | No shift |
+| Turbulence | 0.2 | Light wobble effect |
 
-{
-  "type": "github_commit",
-  "source": "github",
-  "message": "Fix: resolved login bug"
-}
-```
+## Resolume Parameter IDs
 
-### Supported Event Types
+These are the specific parameter IDs from the composition:
 
-**Slack Events:**
-- `slack_message` - Someone sent a message
-- `slack_reaction` - Someone reacted to a message
-
-**GitHub Events:**
-- `github_commit` - Code was committed
-- `github_pr_merged` - Pull request was merged (celebration!)
-
-**Jira Events:**
-- `jira_ticket_created` - New ticket created
-- `jira_ticket_done` - Ticket completed
-- `jira_sprint_complete` - Entire sprint finished (big celebration!)
-
-**System Events:**
-- `idle` - No recent activity
-
-## Customizing Visuals
-
-To change which clip is triggered for an event:
-
-1. Open the **Instant Responder** workflow in n8n
-2. Edit the **Map Event to Visual** code node
-3. Change the `clip` number in the `effectMap` object
-
-Example:
 ```javascript
-'github_commit': { 
-  layer: 1, 
-  clip: 7,  // Changed from 6 to 7
-  name: 'CODE COMMIT',
-  emoji: '💻'
-},
+const PARAM_IDS = {
+  L2_TRANS_DUR: 1767124586747,    // Layer 2 transition duration
+  L2_TRANS_BLEND: 1767124586657,  // Layer 2 transition blend mode
+  TURB_STRENGTH: 1767124595384,   // TASTurbulent effect strength
+  SAT_SCALE: 1767124595299,       // HueRotate saturation scale
+  HUE_ROTATE: 1767124595298       // HueRotate hue shift
+};
 ```
 
-## Available Clips in Your Resolume
+## Timing
 
-Layer 1 has these clips loaded:
-1. basaloopisk
-2. calmness
-3. cubularwonk
-4. insidethewonk
-5. insidethewonk2
-6. organicspiral
-7. organicspiral2
-8. organinoi
-9. organinoi2
-10. protrusion
-11. quadratik
-12. redripple
-13. spiralingthough
-14. tunneling
-15. wonkarama
-16. wonkwobble1
-17. wonkwobble2
-18. wonkwobble4
+| Setting | Value | Description |
+|---------|-------|-------------|
+| Transition Duration | 1.5 sec | Slow, smooth transitions |
+| Text Display | 4 sec | How long text overlay shows |
+| Heart Idle | 10 sec | Time between events (demo) |
 
-## Running the Demo
+## Audio
 
-```bash
-# Default 5-second intervals
-./examples/visual-demo.sh
+Each text clip has audio attached:
+- **GitHub clip**: Speaks when GitHub events trigger
+- **Jira clip**: Speaks when Jira events trigger
+- **Slack clip**: Speaks when Slack events trigger
 
-# Faster (3 seconds)
-DELAY=3 ./examples/visual-demo.sh
+Audio plays automatically when the clip is connected!
 
-# Slower (10 seconds)
-DELAY=10 ./examples/visual-demo.sh
+## API Endpoints Used
+
+### Trigger Clip
 ```
+POST /api/v1/composition/layers/{layer}/clips/{clip}/connect
+```
+
+### Clear Layer (hide text)
+```
+POST /api/v1/composition/layers/2/clear
+```
+
+### Set Parameter
+```
+PUT /api/v1/parameter/by-id/{paramId}
+Body: { "value": <number or string> }
+```
+
+### Available Transitions
+- `Alpha` - Standard fade
+- `DigiGlitch` - Digital glitch effect
+- `Dissolve` - Pixel dissolve
+- `Zoom In` - Zooming transition
+- `Zoom Out` - Reverse zoom
+- `Wipe Ellipse` - Circular wipe
+- And many more...

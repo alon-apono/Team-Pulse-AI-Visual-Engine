@@ -1,5 +1,5 @@
 {
-  "name": "Team Pulse - Instant Responder",
+  "name": "Team Pulse - Instant Responder v2",
   "nodes": [
     {
       "id": "webhook-trigger",
@@ -20,46 +20,148 @@
       "position": [470, 300],
       "typeVersion": 2,
       "parameters": {
-        "jsCode": "// Map event types to Resolume visual effects\nconst event = $input.first().json;\nconst eventType = event.body?.type || event.type || 'unknown';\nconst source = event.body?.source || event.source || 'unknown';\nconst message = event.body?.message || event.message || '';\n\n// Effect mapping for instant visual pulses\nconst effectMap = {\n  'slack_message': { layer: 1, clip: 1, effect: 'ripple', color: '#3498db', intensity: 0.7 },\n  'slack_reaction': { layer: 1, clip: 2, effect: 'particle_burst', color: '#f1c40f', intensity: 0.5 },\n  'github_commit': { layer: 2, clip: 1, effect: 'code_rain', color: '#2ecc71', intensity: 0.8 },\n  'github_pr_merged': { layer: 2, clip: 3, effect: 'celebration', color: '#f39c12', intensity: 1.0 },\n  'jira_ticket_done': { layer: 3, clip: 3, effect: 'complete', color: '#27ae60', intensity: 0.9 },\n  'unknown': { layer: 1, clip: 1, effect: 'pulse', color: '#95a5a6', intensity: 0.4 }\n};\n\nconst effect = effectMap[eventType] || effectMap['unknown'];\nconst posX = Math.random();\nconst posY = Math.random();\n\nreturn {\n  eventType,\n  source,\n  message,\n  ...effect,\n  posX,\n  posY,\n  timestamp: Date.now()\n};"
+        "jsCode": "// Team Pulse v2 - Heart + Text Overlay System\n// Layer 1: Heart (always on) - Clip 1\n// Layer 2: Text overlays - GitHub (clip 1), Jira (clip 2), Slack (clip 3)\n\nconst event = $input.first().json;\nconst eventType = event.body?.type || event.type || 'unknown';\nconst source = event.body?.source || event.source || 'unknown';\nconst message = event.body?.message || event.message || '';\n\n// Resolume Parameter IDs (from your composition)\nconst PARAM_IDS = {\n  L2_TRANS_DUR: 1767124586747,\n  L2_TRANS_BLEND: 1767124586657,\n  TURB_STRENGTH: 1767124595384,\n  SAT_SCALE: 1767124595299,\n  HUE_ROTATE: 1767124595298\n};\n\n// Effect mapping\nconst effectMap = {\n  'github_commit': { layer: 2, clip: 1, transition: 'DigiGlitch', saturation: 0.0, hue: 0.0, turbulence: 0.4 },\n  'github_pr_merged': { layer: 2, clip: 1, transition: 'DigiGlitch', saturation: 0.0, hue: 0.0, turbulence: 0.5 },\n  'jira_ticket_done': { layer: 2, clip: 2, transition: 'Dissolve', saturation: 0.9, hue: 0.55, turbulence: 0.0 },\n  'jira_sprint_complete': { layer: 2, clip: 2, transition: 'Dissolve', saturation: 1.0, hue: 0.55, turbulence: 0.1 },\n  'slack_message': { layer: 2, clip: 3, transition: 'Zoom In', saturation: 1.0, hue: 0.0, turbulence: 0.2 },\n  'slack_reaction': { layer: 2, clip: 3, transition: 'Zoom In', saturation: 1.0, hue: 0.0, turbulence: 0.3 },\n  'idle': { layer: 1, clip: 1, transition: 'Alpha', saturation: 1.0, hue: 0.0, turbulence: 0.0 },\n  'unknown': { layer: 2, clip: 1, transition: 'Alpha', saturation: 0.5, hue: 0.0, turbulence: 0.1 }\n};\n\nconst effect = effectMap[eventType] || effectMap['unknown'];\n\nreturn { eventType, source, message, ...effect, paramIds: PARAM_IDS, timestamp: Date.now() };"
       }
     },
     {
-      "id": "trigger-clip",
-      "name": "Trigger Resolume Clip",
+      "id": "set-transition-blend",
+      "name": "Set Transition Style",
       "type": "n8n-nodes-base.httpRequest",
-      "position": [690, 200],
-      "typeVersion": 4.2,
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $env.RESOLUME_ENDPOINT }}/api/v1/composition/layers/{{ $json.layer }}/clips/{{ $json.clip }}/connect",
-        "options": {}
-      }
-    },
-    {
-      "id": "set-intensity",
-      "name": "Set Layer Intensity",
-      "type": "n8n-nodes-base.httpRequest",
-      "position": [690, 400],
+      "position": [690, 150],
       "typeVersion": 4.2,
       "parameters": {
         "method": "PUT",
-        "url": "={{ $env.RESOLUME_ENDPOINT }}/api/v1/composition/layers/{{ $json.layer }}/video/opacity",
+        "url": "={{ $env.RESOLUME_ENDPOINT }}/api/v1/parameter/by-id/{{ $json.paramIds.L2_TRANS_BLEND }}",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={ \"value\": {{ $json.intensity }} }",
-        "options": {}
+        "jsonBody": "={ \"value\": \"{{ $json.transition }}\" }"
       }
     },
     {
-      "id": "sticky-info",
-      "name": "Info",
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [250, 520],
-      "typeVersion": 1,
+      "id": "set-saturation",
+      "name": "Set Saturation",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [690, 280],
+      "typeVersion": 4.2,
       "parameters": {
-        "content": "## Team Pulse - Instant Responder\n\nReceives events via webhook and immediately triggers Resolume visuals.\n\n**Webhook:** POST /webhook/team-pulse/event\n\n**Event Types:** slack_message, github_commit, github_pr_merged, jira_ticket_done",
-        "height": 200,
-        "width": 350
+        "method": "PUT",
+        "url": "={{ $env.RESOLUME_ENDPOINT }}/api/v1/parameter/by-id/{{ $json.paramIds.SAT_SCALE }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"value\": {{ $json.saturation }} }"
+      }
+    },
+    {
+      "id": "set-hue",
+      "name": "Set Hue",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [690, 410],
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $env.RESOLUME_ENDPOINT }}/api/v1/parameter/by-id/{{ $json.paramIds.HUE_ROTATE }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"value\": {{ $json.hue }} }"
+      }
+    },
+    {
+      "id": "set-turbulence",
+      "name": "Set Turbulence",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [690, 540],
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $env.RESOLUME_ENDPOINT }}/api/v1/parameter/by-id/{{ $json.paramIds.TURB_STRENGTH }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"value\": {{ $json.turbulence }} }"
+      }
+    },
+    {
+      "id": "trigger-text-clip",
+      "name": "Show Text Overlay",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [910, 340],
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.RESOLUME_ENDPOINT }}/api/v1/composition/layers/{{ $json.layer }}/clips/{{ $json.clip }}/connect"
+      }
+    },
+    {
+      "id": "wait-display",
+      "name": "Wait 4 Seconds",
+      "type": "n8n-nodes-base.wait",
+      "position": [1130, 340],
+      "typeVersion": 1.1,
+      "parameters": {
+        "amount": 4,
+        "unit": "seconds"
+      }
+    },
+    {
+      "id": "clear-text",
+      "name": "Hide Text",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1350, 340],
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.RESOLUME_ENDPOINT }}/api/v1/composition/layers/2/clear"
+      }
+    },
+    {
+      "id": "reset-effects",
+      "name": "Reset Effects",
+      "type": "n8n-nodes-base.code",
+      "position": [1570, 340],
+      "typeVersion": 2,
+      "parameters": {
+        "jsCode": "// Reset all effects to normal\nreturn {\n  saturation: 1.0,\n  hue: 0.0,\n  turbulence: 0.0,\n  paramIds: $input.first().json.paramIds\n};"
+      }
+    },
+    {
+      "id": "reset-sat",
+      "name": "Reset Saturation",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1790, 280],
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $env.RESOLUME_ENDPOINT }}/api/v1/parameter/by-id/{{ $json.paramIds.SAT_SCALE }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{ \"value\": 1.0 }"
+      }
+    },
+    {
+      "id": "reset-turb",
+      "name": "Reset Turbulence",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1790, 410],
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $env.RESOLUME_ENDPOINT }}/api/v1/parameter/by-id/{{ $json.paramIds.TURB_STRENGTH }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{ \"value\": 0.0 }"
+      }
+    },
+    {
+      "id": "reset-hue-node",
+      "name": "Reset Hue",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1790, 540],
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $env.RESOLUME_ENDPOINT }}/api/v1/parameter/by-id/{{ $json.paramIds.HUE_ROTATE }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{ \"value\": 0.0 }"
       }
     }
   ],
@@ -68,17 +170,34 @@
       "main": [[{"node": "Map Event to Visual", "type": "main", "index": 0}]]
     },
     "Map Event to Visual": {
-      "main": [
-        [
-          {"node": "Trigger Resolume Clip", "type": "main", "index": 0},
-          {"node": "Set Layer Intensity", "type": "main", "index": 0}
-        ]
-      ]
+      "main": [[
+        {"node": "Set Transition Style", "type": "main", "index": 0},
+        {"node": "Set Saturation", "type": "main", "index": 0},
+        {"node": "Set Hue", "type": "main", "index": 0},
+        {"node": "Set Turbulence", "type": "main", "index": 0}
+      ]]
+    },
+    "Set Turbulence": {
+      "main": [[{"node": "Show Text Overlay", "type": "main", "index": 0}]]
+    },
+    "Show Text Overlay": {
+      "main": [[{"node": "Wait 4 Seconds", "type": "main", "index": 0}]]
+    },
+    "Wait 4 Seconds": {
+      "main": [[{"node": "Hide Text", "type": "main", "index": 0}]]
+    },
+    "Hide Text": {
+      "main": [[{"node": "Reset Effects", "type": "main", "index": 0}]]
+    },
+    "Reset Effects": {
+      "main": [[
+        {"node": "Reset Saturation", "type": "main", "index": 0},
+        {"node": "Reset Turbulence", "type": "main", "index": 0},
+        {"node": "Reset Hue", "type": "main", "index": 0}
+      ]]
     }
   },
   "settings": {
-    "executionOrder": "v1",
-    "saveManualExecutions": true
+    "executionOrder": "v1"
   }
 }
-

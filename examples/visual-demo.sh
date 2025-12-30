@@ -1,97 +1,213 @@
 #!/bin/bash
 
-# Team Pulse Visual Demo
-# Each event triggers a DISTINCT visual in Resolume
+# Team Pulse v2 - Visual Demo Script
+# Heart + Text Overlay System with Cool Transitions & Audio
+#
+# Layer Structure:
+#   Layer 1: Heart (always beating)
+#   Layer 2: Text overlays - GitHub (clip 1), Jira (clip 2), Slack (clip 3)
+#
+# Effects:
+#   GitHub: Gray + Turbulent + DigiGlitch transition
+#   Jira: Blue hue shift + Dissolve transition
+#   Slack: Colorful + Wobble + Zoom In transition
 
-N8N_URL="${N8N_URL:-https://n8n.staging.apono.io}"
-DELAY="${DELAY:-5}"
+RESOLUME="${RESOLUME_ENDPOINT:-http://192.168.1.237:8080}"
 
-trigger_event() {
-    local type=$1
-    local message=$2
-    curl -s -X POST "$N8N_URL/webhook/team-pulse/event" \
+# Parameter IDs from Resolume composition
+L2_TRANS_DUR=1767124586747
+L2_TRANS_BLEND=1767124586657
+TURB_STRENGTH=1767124595384
+SAT_ID=1767124595299
+HUE_ID=1767124595298
+
+# Timing settings
+TRANSITION_DURATION=1.5  # Slow, smooth transitions
+TEXT_DISPLAY_TIME=4      # Text shows for 4 seconds
+HEART_IDLE_TIME=10       # Heart alone for 10 seconds
+
+echo "╔════════════════════════════════════════════════════════════╗"
+echo "║     TEAM PULSE v2 - Heart + Text Overlay Demo              ║"
+echo "║     Transition: ${TRANSITION_DURATION}s | Text: ${TEXT_DISPLAY_TIME}s | Heart: ${HEART_IDLE_TIME}s         ║"
+echo "╚════════════════════════════════════════════════════════════╝"
+echo ""
+echo "Resolume: $RESOLUME"
+echo ""
+
+# Setup function
+setup() {
+    echo "⚙️  Setting up..."
+    # Set transition duration
+    curl -s -X PUT "$RESOLUME/api/v1/parameter/by-id/$L2_TRANS_DUR" \
         -H "Content-Type: application/json" \
-        -d "{\"type\": \"$type\", \"message\": \"$message\"}" > /dev/null
+        -d "{\"value\": $TRANSITION_DURATION}" > /dev/null
+    
+    # Reset effects to normal
+    curl -s -X PUT "$RESOLUME/api/v1/parameter/by-id/$SAT_ID" \
+        -H "Content-Type: application/json" -d '{"value": 1.0}' > /dev/null
+    curl -s -X PUT "$RESOLUME/api/v1/parameter/by-id/$HUE_ID" \
+        -H "Content-Type: application/json" -d '{"value": 0.0}' > /dev/null
+    curl -s -X PUT "$RESOLUME/api/v1/parameter/by-id/$TURB_STRENGTH" \
+        -H "Content-Type: application/json" -d '{"value": 0.0}' > /dev/null
+    
+    # Start heart on Layer 1
+    curl -s -X POST "$RESOLUME/api/v1/composition/layers/1/clips/1/connect" > /dev/null
+    
+    # Clear Layer 2 (text)
+    curl -s -X POST "$RESOLUME/api/v1/composition/layers/2/clear" > /dev/null
+    
+    echo "✓ Ready!"
+    echo ""
 }
 
-echo "╔════════════════════════════════════════════════════╗"
-echo "║     TEAM PULSE - Visual Demo (${DELAY}s intervals)     ║"
-echo "╚════════════════════════════════════════════════════╝"
-echo ""
+# Reset effects to normal
+reset_effects() {
+    curl -s -X PUT "$RESOLUME/api/v1/parameter/by-id/$SAT_ID" \
+        -H "Content-Type: application/json" -d '{"value": 1.0}' > /dev/null
+    curl -s -X PUT "$RESOLUME/api/v1/parameter/by-id/$HUE_ID" \
+        -H "Content-Type: application/json" -d '{"value": 0.0}' > /dev/null
+    curl -s -X PUT "$RESOLUME/api/v1/parameter/by-id/$TURB_STRENGTH" \
+        -H "Content-Type: application/json" -d '{"value": 0.0}' > /dev/null
+}
 
-# Event mapping:
-# ┌─────────────────────┬────────┬─────────────────────────────┐
-# │ Event               │ Clip   │ Visual Style                │
-# ├─────────────────────┼────────┼─────────────────────────────┤
-# │ idle                │ 2      │ calmness - Peaceful         │
-# │ slack_message       │ 3      │ cubularwonk - Geometric     │
-# │ slack_reaction      │ 12     │ redripple - Red burst       │
-# │ github_commit       │ 6      │ organicspiral - Flowing     │
-# │ github_pr_merged    │ 15     │ wonkarama - Celebration     │
-# │ jira_ticket_created │ 1      │ basaloopisk - Starting      │
-# │ jira_ticket_done    │ 10     │ protrusion - Burst out      │
-# │ jira_sprint_complete│ 16     │ wonkwobble1 - Max celebrate │
-# └─────────────────────┴────────┴─────────────────────────────┘
+# GitHub event
+trigger_github() {
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "🐙 GITHUB - DigiGlitch + Gray + Turbulent + Audio"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    
+    # Set effects: gray, turbulent, digiglitch transition
+    curl -s -X PUT "$RESOLUME/api/v1/parameter/by-id/$L2_TRANS_BLEND" \
+        -H "Content-Type: application/json" -d '{"value": "DigiGlitch"}' > /dev/null
+    curl -s -X PUT "$RESOLUME/api/v1/parameter/by-id/$SAT_ID" \
+        -H "Content-Type: application/json" -d '{"value": 0.0}' > /dev/null
+    curl -s -X PUT "$RESOLUME/api/v1/parameter/by-id/$TURB_STRENGTH" \
+        -H "Content-Type: application/json" -d '{"value": 0.4}' > /dev/null
+    
+    # Show GitHub text (clip 1 on layer 2)
+    curl -s -X POST "$RESOLUME/api/v1/composition/layers/2/clips/1/connect" > /dev/null
+    
+    sleep $TEXT_DISPLAY_TIME
+    
+    # Hide text and reset
+    curl -s -X POST "$RESOLUME/api/v1/composition/layers/2/clear" > /dev/null
+    reset_effects
+    echo "   ✓ Back to heart"
+}
 
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "1️⃣  IDLE STATE - Calm, zen visual"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-trigger_event "idle" "System idle"
-echo "→ Clip 2: calmness - Peaceful ambient"
-sleep $DELAY
+# Jira event
+trigger_jira() {
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "📋 JIRA - Dissolve + Blue + Audio"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    
+    # Set effects: blue hue, dissolve transition
+    curl -s -X PUT "$RESOLUME/api/v1/parameter/by-id/$L2_TRANS_BLEND" \
+        -H "Content-Type: application/json" -d '{"value": "Dissolve"}' > /dev/null
+    curl -s -X PUT "$RESOLUME/api/v1/parameter/by-id/$HUE_ID" \
+        -H "Content-Type: application/json" -d '{"value": 0.55}' > /dev/null
+    curl -s -X PUT "$RESOLUME/api/v1/parameter/by-id/$SAT_ID" \
+        -H "Content-Type: application/json" -d '{"value": 0.9}' > /dev/null
+    
+    # Show Jira text (clip 2 on layer 2)
+    curl -s -X POST "$RESOLUME/api/v1/composition/layers/2/clips/2/connect" > /dev/null
+    
+    sleep $TEXT_DISPLAY_TIME
+    
+    # Hide text and reset
+    curl -s -X POST "$RESOLUME/api/v1/composition/layers/2/clear" > /dev/null
+    reset_effects
+    echo "   ✓ Back to heart"
+}
 
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "2️⃣  SLACK MESSAGE - Team communication"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-trigger_event "slack_message" "Hey team, standup in 5!"
-echo "→ Clip 3: cubularwonk - Geometric, structured"
-sleep $DELAY
+# Slack event
+trigger_slack() {
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "💬 SLACK - Zoom In + Colorful + Wobble + Audio"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    
+    # Set effects: colorful, wobble, zoom in transition
+    curl -s -X PUT "$RESOLUME/api/v1/parameter/by-id/$L2_TRANS_BLEND" \
+        -H "Content-Type: application/json" -d '{"value": "Zoom In"}' > /dev/null
+    curl -s -X PUT "$RESOLUME/api/v1/parameter/by-id/$SAT_ID" \
+        -H "Content-Type: application/json" -d '{"value": 1.0}' > /dev/null
+    curl -s -X PUT "$RESOLUME/api/v1/parameter/by-id/$TURB_STRENGTH" \
+        -H "Content-Type: application/json" -d '{"value": 0.2}' > /dev/null
+    
+    # Show Slack text (clip 3 on layer 2)
+    curl -s -X POST "$RESOLUME/api/v1/composition/layers/2/clips/3/connect" > /dev/null
+    
+    sleep $TEXT_DISPLAY_TIME
+    
+    # Hide text and reset
+    curl -s -X POST "$RESOLUME/api/v1/composition/layers/2/clear" > /dev/null
+    reset_effects
+    echo "   ✓ Back to heart"
+}
 
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "3️⃣  SLACK REACTION - Someone liked it!"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-trigger_event "slack_reaction" "👍 reaction"
-echo "→ Clip 12: redripple - Red burst, attention!"
-sleep $DELAY
+# Main demo sequence
+run_demo() {
+    setup
+    
+    echo "🫀 Heart beating (${HEART_IDLE_TIME}s idle)..."
+    sleep $HEART_IDLE_TIME
+    
+    trigger_github
+    echo ""
+    echo "🫀 Heart (${HEART_IDLE_TIME}s)..."
+    sleep $HEART_IDLE_TIME
+    
+    trigger_jira
+    echo ""
+    echo "🫀 Heart (${HEART_IDLE_TIME}s)..."
+    sleep $HEART_IDLE_TIME
+    
+    trigger_slack
+    echo ""
+    
+    echo "╔════════════════════════════════════════════════════════════╗"
+    echo "║              DEMO COMPLETE! 🎉                             ║"
+    echo "╚════════════════════════════════════════════════════════════╝"
+}
 
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "4️⃣  GITHUB COMMIT - Code flowing"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-trigger_event "github_commit" "Fix: login validation bug"
-echo "→ Clip 6: organicspiral - Flowing, code-like"
-sleep $DELAY
-
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "5️⃣  JIRA TICKET DONE - Task complete!"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-trigger_event "jira_ticket_done" "PROJ-123 completed!"
-echo "→ Clip 10: protrusion - Burst outward, completion"
-sleep $DELAY
-
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "6️⃣  🚀 PR MERGED! - Celebration!"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-trigger_event "github_pr_merged" "PR #42 merged! Feature complete!"
-echo "→ Clip 15: wonkarama - Energetic celebration!"
-sleep $DELAY
-
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "7️⃣  🏆 SPRINT COMPLETE! - Big win!"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-trigger_event "jira_sprint_complete" "Sprint 42 DONE! 🎉"
-echo "→ Clip 16: wonkwobble1 - Maximum celebration!"
-
-echo ""
-echo "╔════════════════════════════════════════════════════╗"
-echo "║              DEMO COMPLETE! 🎉                     ║"
-echo "╚════════════════════════════════════════════════════╝"
-echo ""
-echo "Usage: DELAY=3 ./visual-demo.sh  # Faster demo"
-echo "       DELAY=10 ./visual-demo.sh # Slower demo"
-
+# Command line interface
+case "${1:-demo}" in
+    demo)
+        run_demo
+        ;;
+    github)
+        setup
+        trigger_github
+        ;;
+    jira)
+        setup
+        trigger_jira
+        ;;
+    slack)
+        setup
+        trigger_slack
+        ;;
+    setup)
+        setup
+        echo "🫀 Heart is now beating. Ready for events!"
+        ;;
+    reset)
+        reset_effects
+        curl -s -X POST "$RESOLUME/api/v1/composition/layers/2/clear" > /dev/null
+        echo "✓ Effects reset, text cleared"
+        ;;
+    *)
+        echo "Usage: $0 {demo|github|jira|slack|setup|reset}"
+        echo ""
+        echo "Commands:"
+        echo "  demo    - Run full demo sequence (default)"
+        echo "  github  - Trigger GitHub event only"
+        echo "  jira    - Trigger Jira event only"
+        echo "  slack   - Trigger Slack event only"
+        echo "  setup   - Initialize heart and clear text"
+        echo "  reset   - Reset all effects to normal"
+        echo ""
+        echo "Environment:"
+        echo "  RESOLUME_ENDPOINT - Resolume Arena URL (default: http://192.168.1.237:8080)"
+        ;;
+esac

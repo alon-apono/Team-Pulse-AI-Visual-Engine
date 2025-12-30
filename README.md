@@ -1,4 +1,4 @@
-# Team Pulse - AI Visual Engine
+# Team Pulse v2 - AI Visual Engine
 
 > Transform team activity into stunning real-time visuals using n8n + Resolume Arena + AI
 
@@ -8,15 +8,22 @@
 
 ## 🎯 What is Team Pulse?
 
-Team Pulse is a **real-time visualization system** that transforms your team's activity (Slack messages, GitHub commits, Jira tickets) into stunning, responsive visuals. Using n8n for orchestration and AI for creative direction, it creates a living, breathing representation of your team's energy.
+Team Pulse is a **real-time visualization system** that transforms your team's activity (Slack messages, GitHub commits, Jira tickets) into stunning, responsive visuals. A beating heart represents your team's pulse, with text overlays and effects that react to every event!
 
-### The Three-Layer Response System
+### ❤️ The Heart System (v2)
 
-| Layer | Latency | What Happens |
-|-------|---------|--------------|
-| **Instant** | < 1 sec | Every event triggers immediate visual pulse |
-| **Adaptive** | 5 sec | Activity frequency adjusts colors, BPM, intensity |
-| **Ambient** | 30 sec | AI interprets mood and triggers theme changes |
+| Layer | Content | Behavior |
+|-------|---------|----------|
+| **Layer 1** | 🫀 Beating Heart | Always visible, represents team's pulse |
+| **Layer 2** | 📝 Text Overlays | GitHub/Jira/Slack text + audio, appears for 4 sec |
+
+### Visual Effects by Event Type
+
+| Event | Transition | Color Effect | Extra |
+|-------|------------|--------------|-------|
+| 🐙 GitHub | DigiGlitch | Gray/B&W | Turbulent distortion |
+| 📋 Jira | Dissolve | Blue shift | Smooth, professional |
+| 💬 Slack | Zoom In | Colorful | Wobble effect |
 
 ## 🏗️ Architecture
 
@@ -24,116 +31,99 @@ Team Pulse is a **real-time visualization system** that transforms your team's a
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │  Data Sources   │     │  n8n Workflows  │     │ Resolume Arena  │
 ├─────────────────┤     ├─────────────────┤     ├─────────────────┤
-│ • Slack         │────▶│ Instant Respond │────▶│ • Clip Triggers │
-│ • GitHub        │     │ Adaptive Process│     │ • BPM Control   │
-│ • Jira          │     │ Ambient Director│     │ • Color Shifts  │
-│ • Demo Panel    │     │ (with AI)       │     │ • Effects       │
+│ • Slack         │────▶│ Instant Respond │────▶│ Layer 1: Heart  │
+│ • GitHub        │     │ (webhook)       │     │ Layer 2: Text   │
+│ • Jira          │     │                 │     │ + Effects       │
+│ • Demo Script   │     │                 │     │ + Audio         │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
 ```
 
 ## 📦 Included Workflows
 
-### 1. Instant Responder (`workflows/instant-responder.json`)
-- **Trigger:** Webhook
-- **Purpose:** Sub-second visual reactions to every event
-- **Features:** Event-type mapping, random positioning, intensity control
-
-### 2. Adaptive Processor (`workflows/adaptive-processor.json`)
-- **Trigger:** Every 5 seconds
-- **Purpose:** Analyzes activity patterns and adjusts visual parameters
-- **Features:** BPM calculation, color temperature, master opacity
-
-### 3. Ambient Director (`workflows/ambient-director.json`)
-- **Trigger:** Every 30 seconds
-- **Purpose:** AI interprets team mood and sets visual themes
-- **Features:** GPT-4o integration, mood classification, theme transitions
-
-### 4. Demo Trigger Panel (`workflows/demo-trigger-panel.json`)
-- **Trigger:** Webhook
-- **Purpose:** Competition demo - rapid-fire event simulation
-- **Commands:** `slack`, `github`, `jira`, `celebration`, `burst`
+### Instant Responder v2 (`workflows/instant-responder.json`)
+- **Trigger:** Webhook `POST /webhook/team-pulse/event`
+- **Flow:** 
+  1. Receive event → Map to visual settings
+  2. Apply effects (saturation, hue, turbulence)
+  3. Set transition style (DigiGlitch/Dissolve/Zoom In)
+  4. Show text overlay (4 seconds)
+  5. Clear text → Reset effects
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 - n8n instance (self-hosted or cloud)
-- Resolume Arena with REST API enabled
-- Azure OpenAI or OpenAI API key (for AI features)
+- Resolume Arena with REST API enabled (port 8080)
 
-### Setup
+### Resolume Setup
 
-1. **Import Workflows to n8n:**
+1. **Enable REST API:**
+   - Preferences > Webserver > Enable
+   - Port: 8080
+
+2. **Layer Structure:**
+   - **Layer 1:** Heart clip (clip 1)
+   - **Layer 2:** GitHub (clip 1), Jira (clip 2), Slack (clip 3)
+
+3. **Required Effects on Composition:**
+   - HueRotate (for color control)
+   - TASTurbulent (for distortion effects)
+
+### n8n Setup
+
+1. **Import Workflow:**
    ```bash
-   # Import each workflow JSON file via n8n UI or API
+   # Import workflows/instant-responder.json via n8n UI
    ```
 
-2. **Configure Environment Variables in n8n:**
+2. **Set Environment Variable:**
    ```
-   RESOLUME_ENDPOINT=http://your-resolume-ip:8080
-   N8N_WEBHOOK_URL=https://your-n8n-instance.com
+   RESOLUME_ENDPOINT=http://192.168.1.237:8080
    ```
 
-3. **Set up Resolume Arena:**
-   - Enable REST API in Preferences > Webserver
-   - Organize clips by layer:
-     - Layer 1: Slack effects (ripple, particles)
-     - Layer 2: GitHub effects (code rain, celebration)
-     - Layer 3: Jira effects (progress, complete)
-     - Layer 4: Theme clips (5 moods)
+3. **Activate Workflow**
 
-4. **Activate Workflows:**
-   - Activate all 4 workflows in n8n
-   - Test with demo panel
-
-### Testing the Demo
+### Testing
 
 ```bash
-# Trigger Slack events
-curl -X POST https://your-n8n/webhook/team-pulse/demo \
-  -H "Content-Type: application/json" \
-  -d '{"demo_type": "slack"}'
+# Run the visual demo
+cd examples
+chmod +x visual-demo.sh
+./visual-demo.sh demo
 
-# Trigger celebration sequence
-curl -X POST https://your-n8n/webhook/team-pulse/demo \
-  -H "Content-Type: application/json" \
-  -d '{"demo_type": "celebration"}'
-
-# Trigger 20-event burst
-curl -X POST https://your-n8n/webhook/team-pulse/demo \
-  -H "Content-Type: application/json" \
-  -d '{"demo_type": "burst"}'
+# Or trigger individual events
+./visual-demo.sh github
+./visual-demo.sh jira
+./visual-demo.sh slack
 ```
 
 ## 🎨 Visual Mapping
 
 ### Event Types → Effects
 
-| Event | Layer | Effect | Color |
-|-------|-------|--------|-------|
-| `slack_message` | 1 | Ripple | Blue |
-| `slack_reaction` | 1 | Particle Burst | Yellow |
-| `github_commit` | 2 | Code Rain | Green |
-| `github_pr_merged` | 2 | Celebration | Gold |
-| `jira_ticket_done` | 3 | Complete | Green |
-| `jira_sprint_complete` | 3 | Victory | Gold |
+| Event | Layer | Clip | Transition | Saturation | Hue | Turbulence |
+|-------|-------|------|------------|------------|-----|------------|
+| `github_commit` | 2 | 1 | DigiGlitch | 0.0 (gray) | 0.0 | 0.4 |
+| `github_pr_merged` | 2 | 1 | DigiGlitch | 0.0 | 0.0 | 0.5 |
+| `jira_ticket_done` | 2 | 2 | Dissolve | 0.9 | 0.55 (blue) | 0.0 |
+| `jira_sprint_complete` | 2 | 2 | Dissolve | 1.0 | 0.55 | 0.1 |
+| `slack_message` | 2 | 3 | Zoom In | 1.0 (color) | 0.0 | 0.2 |
+| `slack_reaction` | 2 | 3 | Zoom In | 1.0 | 0.0 | 0.3 |
 
-### AI Moods → Themes
+### Timing
 
-| Mood | Theme | Color Scheme |
-|------|-------|--------------|
-| `flow_state` | Steady, productive | Blue/Purple |
-| `creative_chaos` | High energy | Rainbow |
-| `victory_lap` | Celebration | Gold |
-| `deep_focus` | Minimal, calm | Dark Blue |
-| `idle` | Ambient, quiet | Zen |
+| Setting | Value |
+|---------|-------|
+| Transition Duration | 1.5 seconds (slow, smooth) |
+| Text Display | 4 seconds |
+| Heart Idle (demo) | 10 seconds between events |
 
-## 🏢 Office Use Cases
+## 🔊 Audio
 
-1. **Lobby Display** - Visitors see company energy in real-time
-2. **All-Hands Meetings** - Background visuals react to discussion
-3. **Hackathon Events** - Visualize team progress as they code
-4. **Remote Team Building** - Shared visual experience across locations
-5. **Celebration Moments** - Automatic visual fireworks for wins
+Each text clip has audio that plays automatically:
+- **GitHub clip:** Announces GitHub events
+- **Jira clip:** Announces Jira events  
+- **Slack clip:** Announces Slack events
 
 ## 📁 Project Structure
 
@@ -141,44 +131,62 @@ curl -X POST https://your-n8n/webhook/team-pulse/demo \
 Team-Pulse-AI-Visual-Engine/
 ├── README.md
 ├── workflows/
-│   ├── instant-responder.json
+│   ├── instant-responder.json    # Main workflow (v2)
 │   ├── adaptive-processor.json
 │   ├── ambient-director.json
 │   └── demo-trigger-panel.json
 ├── docs/
 │   ├── resolume-setup.md
-│   └── event-mapping.md
+│   └── event-mapping.md          # Detailed mapping docs
 └── examples/
-    └── demo-commands.sh
+    ├── demo-commands.sh
+    └── visual-demo.sh            # Full demo script
 ```
 
 ## 🔧 Resolume API Reference
 
 ### Trigger a Clip
-```
+```bash
 POST /api/v1/composition/layers/{layer}/clips/{clip}/connect
 ```
 
-### Set Layer Opacity
-```
-PUT /api/v1/composition/layers/{layer}/video/opacity
-Body: { "value": 0.0 - 1.0 }
+### Clear Layer (hide text)
+```bash
+POST /api/v1/composition/layers/2/clear
 ```
 
-### Set BPM
+### Set Parameter by ID
+```bash
+PUT /api/v1/parameter/by-id/{paramId}
+Body: { "value": <number or string> }
 ```
-PUT /api/v1/composition/tempocontroller/tempo
-Body: { "value": 60 - 200 }
+
+### Key Parameter IDs (from this composition)
+```javascript
+L2_TRANS_DUR: 1767124586747    // Transition duration
+L2_TRANS_BLEND: 1767124586657  // Transition blend mode
+TURB_STRENGTH: 1767124595384   // Turbulence effect
+SAT_SCALE: 1767124595299       // Color saturation
+HUE_ROTATE: 1767124595298      // Hue shift
 ```
+
+## 🏢 Office Use Cases
+
+1. **Lobby Display** - Visitors see company energy as a beating heart
+2. **All-Hands Meetings** - Background visuals react to discussion
+3. **Hackathon Events** - Visualize team progress as they code
+4. **Remote Team Building** - Shared visual experience across locations
+5. **Celebration Moments** - Automatic visual effects for wins
 
 ## 🏆 Competition Notes
 
 This project demonstrates:
 - **Real-time responsiveness** - Sub-second visual reactions
-- **AI creativity** - GPT-4o as a "Creative Director"
-- **Practical value** - Real office/event use cases
-- **Technical depth** - Webhooks, scheduling, AI, HTTP orchestration
+- **Creative visual design** - Heart metaphor with text overlays
+- **Audio feedback** - Clips speak when triggered
+- **Technical depth** - Webhooks, effects control, transitions
 - **Visual impact** - Stunning, meaningful visualizations
+- **Practical value** - Real office/event use cases
 
 ## 📄 License
 
@@ -186,5 +194,4 @@ MIT License - Build something amazing!
 
 ---
 
-**Built with ❤️ using n8n + Resolume Arena + AI**
-
+**Built with ❤️ using n8n + Resolume Arena**
